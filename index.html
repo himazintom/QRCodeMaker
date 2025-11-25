@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコード・バーコード生成システム v2</title>
+
+    <!-- 外部ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- スタイルシート -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles_v2.css">
+</head>
+
+<body>
+    <!-- グローバル設定 -->
+    <div class="global-settings">
+        <div class="header-row">
+            <h2>QRコード・バーコード生成システム v2</h2>
+            <div class="theme-toggle" title="テーマは自動検出されます">🌙</div>
+        </div>
+
+        <div class="setting-group">
+            <label for="print-title">印刷用タイトル（任意）</label>
+            <input type="text" id="print-title" placeholder="印刷時に表示されるタイトル">
+        </div>
+
+        <div class="setting-group">
+            <fieldset>
+                <legend>区切り方法</legend>
+                <div class="delimiter-options">
+                    <label><input type="radio" name="delimiter" value="newline" checked> 改行</label>
+                    <label><input type="radio" name="delimiter" value="comma"> カンマ</label>
+                    <label><input type="radio" name="delimiter" value="semicolon"> セミコロン</label>
+                    <label><input type="radio" name="delimiter" value="tab"> タブ</label>
+                    <label><input type="radio" name="delimiter" value="custom"> カスタム</label>
+                    <input type="text" id="custom-delimiter" placeholder="文字" maxlength="1" style="display: none;">
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="setting-group">
+            <div class="paper-settings">
+                <div class="paper-setting-item">
+                    <label for="paper-size">用紙サイズ</label>
+                    <select id="paper-size">
+                        <option value="a4" selected>A4</option>
+                        <option value="a5">A5</option>
+                        <option value="letter">Letter</option>
+                    </select>
+                </div>
+                <div class="paper-setting-item">
+                    <label for="paper-orientation">向き</label>
+                    <select id="paper-orientation">
+                        <option value="portrait" selected>縦</option>
+                        <option value="landscape">横</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="import-btn" class="secondary-btn" title="Ctrl+O">インポート</button>
+            <button id="export-btn" class="secondary-btn" title="Ctrl+S">エクスポート</button>
+            <button id="reset-btn" class="secondary-btn">リセット</button>
+        </div>
+
+        <input type="file" id="import-file" accept=".json,.csv" style="display: none;">
+    </div>
+
+    <!-- 入力ブロックコンテナ -->
+    <div id="blocks-container"></div>
+
+    <!-- ブロック追加ボタン -->
+    <button id="add-block-btn" class="add-block-btn" title="Ctrl+N">+ 入力ブロック追加</button>
+
+    <!-- メインアクションボタン -->
+    <div class="main-actions">
+        <button id="generate-btn" class="primary-btn" title="Ctrl+Enter">コード作成</button>
+        <button id="preview-btn" class="primary-btn" title="Ctrl+P" disabled>プレビュー</button>
+        <button id="print-btn" class="primary-btn" disabled>印刷</button>
+        <button id="pdf-btn" class="primary-btn" disabled>PDF保存</button>
+    </div>
+
+    <!-- ツールバー（アンドゥ・リドゥ） -->
+    <div class="toolbar">
+        <button id="undo-btn" class="toolbar-btn" title="Ctrl+Z" disabled>↶ 元に戻す</button>
+        <button id="redo-btn" class="toolbar-btn" title="Ctrl+Shift+Z" disabled>↷ やり直す</button>
+    </div>
+
+    <!-- プログレス表示 -->
+    <div id="progress-indicator" class="progress-indicator" style="display: none;"></div>
+
+    <!-- エラーリスト -->
+    <div id="error-list" class="error-list" style="display: none;"></div>
+
+    <!-- 印刷用タイトル（通常は非表示） -->
+    <h1 class="print-title"></h1>
+
+    <!-- 生成されたコード表示エリア -->
+    <div id="code-display"></div>
+
+    <!-- JavaScriptモジュール読み込み -->
+    <script type="module" src="js/app_v2.js"></script>
+</body>
+
+</html>
