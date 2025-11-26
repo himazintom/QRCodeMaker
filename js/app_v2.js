@@ -823,6 +823,15 @@ export class QRBarcodeApp {
         this.store.setMode(newMode);
 
         document.body.classList.toggle('preview-mode', newMode === 'preview');
+
+        // プレビューモードに入るときにタイトルを更新
+        if (newMode === 'preview') {
+            const settings = this.store.getSettings();
+            const titleElement = document.querySelector('.print-title');
+            if (titleElement) {
+                titleElement.textContent = settings.printTitle || '';
+            }
+        }
     }
 
     // ========================================
