@@ -917,22 +917,44 @@ export class QRBarcodeApp {
         const blocks = this.store.getBlocks();
         const settings = this.store.getSettings();
 
-        // ヘッダー行
-        const csvData = [['Subtitle', 'CodeType', 'Content', 'QRErrorCorrection', 'BarcodeFormat', 'SizeOverride']];
+        // 新しい形式（列指向）でデータを作成
+        const rows = [];
 
-        // データ行
-        blocks.forEach(block => {
-            csvData.push([
-                block.subtitle || '',
-                block.codeType,
-                block.content || '',
-                block.qrErrorCorrection,
-                block.barcodeFormat,
-                block.sizeOverride
-            ]);
+        // 1. メタデータ行
+        rows.push(['Subtitle', ...blocks.map(b => b.subtitle || '')]);
+        rows.push(['CodeType', ...blocks.map(b => b.codeType)]);
+        rows.push(['QRErrorCorrection', ...blocks.map(b => b.qrErrorCorrection)]);
+        rows.push(['BarcodeFormat', ...blocks.map(b => b.barcodeFormat)]);
+        rows.push(['SizeOverride', ...blocks.map(b => b.sizeOverride)]);
+
+        // 2. コンテンツ行
+        // 各ブロックのコンテンツを行単位に分割
+        const blockContents = blocks.map(b => {
+            // コンテンツがない場合は空配列
+            if (!b.content) return [];
+            // 改行で分割
+            return b.content.split(/\r?\n/);
         });
 
-        const csvString = toCSV(csvData);
+        // 最大行数を取得
+        const maxLines = Math.max(...blockContents.map(lines => lines.length), 0);
+
+        // コンテンツ行を追加
+        for (let i = 0; i < maxLines; i++) {
+            const row = [];
+            // 最初の列は 'Content' (最初の行のみ)
+            row.push(i === 0 ? 'Content' : '');
+
+            // 各ブロックのi行目を追加
+            blocks.forEach((_, blockIndex) => {
+                const lines = blockContents[blockIndex];
+                row.push(lines[i] || '');
+            });
+
+            rows.push(row);
+        }
+
+        const csvString = toCSV(rows);
 
         // 印刷用タイトルがあればそれを使用、なければデフォルト名
         const baseFilename = settings.printTitle?.trim() || `qr-barcode-data-v2-${formatDateTime()}`;
@@ -953,23 +975,94 @@ export class QRBarcodeApp {
             // ファイル拡張子または内容で判定
             if (file.name.toLowerCase().endsWith('.csv')) {
                 const csvData = parseCSV(text);
-                // ヘッダー行をスキップ（もしあれば）
-                const startRow = (csvData.length > 0 && csvData[0][0] === 'Subtitle') ? 1 : 0;
+
+                if (csvData.length === 0) {
+                    throw new Error('データが空です');
+                }
+
+                // 形式判定
+                // 旧形式: 1行目がヘッダーで 'CodeType', 'Content' などを含む
+                const headerRow = csvData[0];
+                const isOldFormat = headerRow.includes('CodeType') && headerRow.includes('Content');
+
+                // 新形式: 1列目がキーで 'CodeType' という行が存在する
+                // (旧形式でない、かつ 1列目に 'CodeType' を持つ行がある)
+                const isNewFormat = !isOldFormat && csvData.some(row => row[0] === 'CodeType');
 
                 const newBlocks = [];
-                for (let i = startRow; i < csvData.length; i++) {
-                    const row = csvData[i];
-                    if (row.length < 3) continue; // 最低限必要なカラム数
 
-                    const block = createNewBlock();
-                    block.subtitle = row[0] || '';
-                    block.codeType = (row[1] === 'barcode') ? 'barcode' : 'qr';
-                    block.content = row[2] || '';
-                    if (row[3]) block.qrErrorCorrection = row[3];
-                    if (row[4]) block.barcodeFormat = row[4];
-                    if (row[5]) block.sizeOverride = row[5];
+                if (isNewFormat) {
+                    // 新形式のインポート
+                    const numBlocks = csvData[0].length - 1;
+                    if (numBlocks < 1) throw new Error('有効なデータ列が見つかりません');
 
-                    newBlocks.push(block);
+                    // 各ブロックのデータを構築
+                    for (let col = 1; col <= numBlocks; col++) {
+                        const block = createNewBlock();
+
+                        // メタデータ読み込み
+                        const findRow = (key) => csvData.find(row => row[0] === key);
+
+                        const subtitleRow = findRow('Subtitle');
+                        const codeTypeRow = findRow('CodeType');
+                        const qrErrorRow = findRow('QRErrorCorrection');
+                        const barcodeFormatRow = findRow('BarcodeFormat');
+                        const sizeOverrideRow = findRow('SizeOverride');
+
+                        if (subtitleRow) block.subtitle = subtitleRow[col] || '';
+                        if (codeTypeRow) block.codeType = (codeTypeRow[col] === 'barcode') ? 'barcode' : 'qr';
+                        if (qrErrorRow) block.qrErrorCorrection = qrErrorRow[col] || 'M';
+                        if (barcodeFormatRow) block.barcodeFormat = barcodeFormatRow[col] || 'CODE128';
+                        if (sizeOverrideRow) block.sizeOverride = sizeOverrideRow[col] || 'auto';
+
+                        // コンテンツ読み込み
+                        const contentRowIndex = csvData.findIndex(row => row[0] === 'Content');
+                        if (contentRowIndex !== -1) {
+                            const contentLines = [];
+                            // 定義済みのキーリスト（これらに遭遇したらコンテンツ読み込みを停止）
+                            const knownKeys = ['Subtitle', 'CodeType', 'QRErrorCorrection', 'BarcodeFormat', 'SizeOverride'];
+
+                            for (let i = contentRowIndex; i < csvData.length; i++) {
+                                // コンテンツ行以降で、別のプロパティ行に遭遇したら中断
+                                if (i > contentRowIndex && csvData[i][0] && knownKeys.includes(csvData[i][0])) {
+                                    break;
+                                }
+
+                                const cell = csvData[i][col];
+                                // undefinedの場合は空文字扱い
+                                const val = cell === undefined ? '' : cell;
+                                contentLines.push(val);
+                            }
+
+                            // 末尾の空行を削除
+                            while (contentLines.length > 0 && contentLines[contentLines.length - 1] === '') {
+                                contentLines.pop();
+                            }
+                            block.content = contentLines.join('\n');
+                        }
+
+                        newBlocks.push(block);
+                    }
+
+                } else {
+                    // 旧形式（行指向）のインポート
+                    // ヘッダー行をスキップ（もしあれば）
+                    const startRow = (csvData.length > 0 && csvData[0][0] === 'Subtitle') ? 1 : 0;
+
+                    for (let i = startRow; i < csvData.length; i++) {
+                        const row = csvData[i];
+                        if (row.length < 3) continue; // 最低限必要なカラム数
+
+                        const block = createNewBlock();
+                        block.subtitle = row[0] || '';
+                        block.codeType = (row[1] === 'barcode') ? 'barcode' : 'qr';
+                        block.content = row[2] || '';
+                        if (row[3]) block.qrErrorCorrection = row[3];
+                        if (row[4]) block.barcodeFormat = row[4];
+                        if (row[5]) block.sizeOverride = row[5];
+
+                        newBlocks.push(block);
+                    }
                 }
 
                 if (newBlocks.length === 0) {
