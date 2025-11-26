@@ -103,6 +103,7 @@ export class QRBarcodeApp {
         document.getElementById('preview-btn')?.addEventListener('click', () => this.togglePreview());
         document.getElementById('print-btn')?.addEventListener('click', () => this.print());
         document.getElementById('pdf-btn')?.addEventListener('click', () => this.saveAsPDF());
+        document.getElementById('save-image-btn')?.addEventListener('click', () => this.saveAsImage());
         document.getElementById('undo-btn')?.addEventListener('click', () => this.undo());
         document.getElementById('redo-btn')?.addEventListener('click', () => this.redo());
 
@@ -622,6 +623,7 @@ export class QRBarcodeApp {
         const hasCodes = codes.length > 0;
         document.getElementById('print-btn').disabled = !hasCodes;
         document.getElementById('pdf-btn').disabled = !hasCodes;
+        document.getElementById('save-image-btn').disabled = !hasCodes;
         document.getElementById('preview-btn').disabled = !hasCodes;
     }
 
@@ -852,7 +854,7 @@ export class QRBarcodeApp {
         const settings = this.store.getSettings();
         const filename = settings.printTitle?.trim() || `qr-codes-${formatDateTime()}`;
 
-        // PDF生成モード用のクラスを追加
+        // PDF生成モード用のクラスを追加（印刷スタイルを適用）
         document.body.classList.add('pdf-export-mode');
 
         // タイトルを表示
@@ -878,6 +880,52 @@ export class QRBarcodeApp {
         } catch (error) {
             console.error(error);
             alert('PDF保存中にエラーが発生しました。');
+        } finally {
+            this.store.setGenerating(false);
+            document.body.classList.remove('pdf-export-mode');
+            if (titleEl) titleEl.style.display = 'none';
+        }
+    }
+
+    async saveAsImage() {
+        if (typeof html2pdf === 'undefined') { // html2pdf bundle includes html2canvas
+            alert('画像生成ライブラリの読み込みに失敗しました。');
+            return;
+        }
+
+        const element = document.getElementById('code-display');
+        const settings = this.store.getSettings();
+        const filename = settings.printTitle?.trim() || `qr-codes-${formatDateTime()}`;
+
+        // PDF生成モード用のクラスを追加（印刷スタイルを適用）
+        document.body.classList.add('pdf-export-mode');
+
+        // タイトルを表示
+        const titleEl = document.querySelector('.print-title');
+        if (settings.printTitle) {
+            titleEl.textContent = settings.printTitle;
+            titleEl.style.display = 'block';
+        }
+
+        this.store.setGenerating(true);
+
+        try {
+            // html2pdf経由でキャンバスを取得
+            const worker = html2pdf().from(element).set({
+                html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' }
+            });
+
+            const canvas = await worker.toCanvas().get('canvas');
+
+            // 画像として保存
+            const link = document.createElement('a');
+            link.download = `${filename}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+        } catch (error) {
+            console.error(error);
+            alert('画像保存中にエラーが発生しました。');
         } finally {
             this.store.setGenerating(false);
             document.body.classList.remove('pdf-export-mode');

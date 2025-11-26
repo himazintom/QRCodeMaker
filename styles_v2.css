@@ -840,8 +840,10 @@ button:active {
    プレビューモード
    ======================================== */
 body.preview-mode {
-    padding-top: 80px; /* 固定ヘッダー分のスペース */
-    background-color: #f3f4f6; /* 背景色を明示 */
+    padding-top: 80px;
+    /* 固定ヘッダー分のスペース */
+    background-color: #f3f4f6;
+    /* 背景色を明示 */
 }
 
 body.preview-mode .global-settings,
@@ -873,14 +875,16 @@ body.preview-mode .main-actions {
     z-index: 1000;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* ボタンを右寄せ */
+    justify-content: flex-end;
+    /* ボタンを右寄せ */
     border-radius: 0;
 }
 
 /* プレビューモード表示ラベル */
 body.preview-mode .main-actions::before {
     content: "👁️ プレビューモード";
-    margin-right: auto; /* 左側に配置 */
+    margin-right: auto;
+    /* 左側に配置 */
     font-size: 18px;
     font-weight: 700;
     color: var(--color-primary);
@@ -1065,6 +1069,7 @@ body.preview-mode .print-title {
         overflow: hidden !important;
         display: -webkit-box !important;
         -webkit-line-clamp: var(--code-line-clamp) !important;
+        line-clamp: var(--code-line-clamp) !important;
         -webkit-box-orient: vertical !important;
     }
 
@@ -1218,17 +1223,29 @@ textarea:focus-visible {
 }
 
 /* ========================================
-   PDFエクスポートモード
+   PDFエクスポートモード (印刷スタイルに合わせる)
    ======================================== */
 body.pdf-export-mode {
     width: 210mm;
     margin: 0 auto;
     background: white !important;
     color: black !important;
+
+    /* 印刷用変数を適用 */
+    --code-gap: 2mm;
+    --code-width-small: 48mm;
+    --code-width-medium: 48mm;
+    --code-width-large: 98mm;
+    --code-height-small: 65mm;
+    --code-height-medium: 65mm;
+    --code-height-large: 100mm;
+    --card-horizontal-padding: 1mm;
+    --qr-frame-padding: 1mm;
+
     --color-bg: #ffffff;
     --color-surface: #ffffff;
     --color-text: #000000;
-    --color-border: #cccccc;
+    --color-border: #999999;
 }
 
 body.pdf-export-mode .global-settings,
@@ -1245,94 +1262,143 @@ body.pdf-export-mode .theme-toggle {
 body.pdf-export-mode #code-display {
     margin-top: 0;
     background: white !important;
+    width: auto !important;
 }
 
 body.pdf-export-mode .code-section {
     box-shadow: none !important;
     border: none !important;
     padding: 0;
-    margin-bottom: 20px;
+    margin-bottom: 20px !important;
     background: white !important;
 }
 
 body.pdf-export-mode .section-title {
-    font-size: 14pt;
-    border-bottom: 2px solid #000;
-    margin-bottom: 10px;
-    padding-bottom: 2px;
+    font-size: 16pt !important;
+    border-bottom: 2px solid #000 !important;
+    margin: 0 0 10px 0 !important;
+    padding-bottom: 0.5mm !important;
     color: #000 !important;
     background: transparent !important;
 }
 
 body.pdf-export-mode .code-grid {
-    display: grid;
+    display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
-    gap: 3mm !important;
+    gap: var(--code-gap) !important;
+    column-gap: 3mm !important;
+    row-gap: 3mm !important;
     width: 100%;
+    justify-content: flex-start !important;
 }
 
 body.pdf-export-mode .code-item {
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
-    border-radius: 4px;
-    padding: 5px;
-    min-height: auto;
-    /* 高さは内容なりに */
-    height: auto;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: var(--code-height-small) !important;
+    /* デフォルトサイズ */
+    border: 0.3pt solid #999 !important;
+    padding: 1.5mm !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
     background: white !important;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    page-break-inside: avoid;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+    position: relative !important;
     color: black !important;
 }
 
 body.pdf-export-mode .code-item.code-size-large {
-    grid-column: span 2;
+    grid-column: span 2 !important;
+    min-height: var(--code-height-large) !important;
 }
 
 body.pdf-export-mode .code-index {
-    display: none;
+    display: block !important;
+    /* 表示する */
+    position: absolute !important;
+    top: 1mm !important;
+    left: 1mm !important;
+    background: transparent !important;
+    color: #000 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-size: 6.5pt !important;
+    font-weight: bold !important;
+    z-index: 100 !important;
+    text-align: left !important;
 }
 
 body.pdf-export-mode .code-text {
-    font-size: 8pt;
-    margin: 2px 0 5px 0;
-    max-height: 2.8em;
-    line-height: 1.4;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    margin: 3mm 0 1mm 0 !important;
+    font-size: 5.5pt !important;
+    text-align: center !important;
+    word-break: break-all !important;
+    line-height: 1.2 !important;
+    max-width: calc(100% - 3mm) !important;
     color: #000 !important;
-    text-align: center;
-    word-break: break-all;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 7 !important;
+    /* var(--code-line-clamp) の代わり */
+    line-clamp: 7 !important;
+    -webkit-box-orient: vertical !important;
+}
+
+body.pdf-export-mode .code-visual {
+    margin-top: 1.5mm !important;
+    margin-bottom: 1mm !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
 }
 
 body.pdf-export-mode .qr-frame {
-    padding: 0;
-    width: auto;
-    height: auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: calc(100% - 2mm) !important;
+    /* padding * 2 */
+    max-width: calc(100% - 2mm) !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 1mm !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
 
-/* QRコード・バーコードのサイズ制限 */
-body.pdf-export-mode .code-visual img,
-body.pdf-export-mode .code-visual canvas,
-body.pdf-export-mode svg {
-    max-width: 35mm !important;
-    max-height: 35mm !important;
-    width: auto !important;
-    height: auto !important;
-    object-fit: contain;
+body.pdf-export-mode .qr-inner svg,
+body.pdf-export-mode .qr-inner canvas,
+body.pdf-export-mode .qr-inner img {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
+body.pdf-export-mode .barcode-container {
+    margin-top: auto !important;
+    margin-bottom: 1mm !important;
+    height: 18mm !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+}
+
+body.pdf-export-mode .barcode-container svg {
+    max-width: 100% !important;
+    height: 16mm !important;
 }
 
 body.pdf-export-mode .print-title {
     display: block;
     text-align: center;
-    font-size: 20pt;
-    margin-bottom: 15px;
-    font-weight: bold;
+    font-size: 24pt !important;
+    margin: 0 0 20px 0 !important;
+    font-weight: bold !important;
     color: #000 !important;
 }
